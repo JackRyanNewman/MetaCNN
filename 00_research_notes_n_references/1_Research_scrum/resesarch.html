@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C Optimization Notes</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 21cm;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+        }
+        
+        h1 {
+            color: #1a1a1a;
+            border-bottom: 3px solid #333;
+            padding-bottom: 10px;
+            margin-top: 30px;
+            font-size: 24pt;
+            page-break-before: always;
+        }
+        
+        h1:first-of-type {
+            page-break-before: avoid;
+        }
+        
+        h2 {
+            color: #2c2c2c;
+            margin-top: 25px;
+            font-size: 18pt;
+            border-left: 4px solid #666;
+            padding-left: 10px;
+        }
+        
+        h3 {
+            color: #444;
+            margin-top: 20px;
+            font-size: 14pt;
+        }
+        
+        h4 {
+            color: #555;
+            margin-top: 15px;
+            font-size: 12pt;
+            font-style: italic;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 10pt;
+        }
+        
+        pre {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-left: 4px solid #666;
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 9pt;
+            line-height: 1.4;
+            page-break-inside: avoid;
+        }
+        
+        ul, ol {
+            margin-left: 20px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .note-box {
+            background: #fffbf0;
+            border: 1px solid #e6d9a3;
+            border-left: 4px solid #d4af37;
+            padding: 15px;
+            margin: 15px 0;
+            page-break-inside: avoid;
+        }
+        
+        .button-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        button {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            background: #555;
+        }
+        
+        @media print {
+            .button-container {
+                display: none;
+            }
+            
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="button-container">
+        <button onclick="window.print()">Download as PDF</button>
+    </div>
+
+    <h1>High Peformance Computing: Research Motivation</h1>
+    
+    <p>Modern CNN architectures frequently store and process data in flattened 1D arrays, which places heavy demands on memory bandwidth and cache efficiency. While I've already explored optimizations in threading and parallel processing, I now want to focus more deeply on SIMD access patterns and their interaction with caching and prefetching.</p>
+
+    <p>At a low level, performance depends not only on computation but also on how data flows through the memory hierarchy. Sequential versus non-sequential access, cache line alignment, and compiler vectorization strategies all play a role in how effectively hardware prefetchers detect and optimize memory usage. I also want to explore experimental information (such as data types), and how I could/if I can leverage them for CNNs.</p>
+
+    <p>This research aims to clarify:</p>
+    <ol type="A">
+        <li>What optimizations the compiler performs automatically versus what requires manual intervention,  also look more deeply into OpenMP and threading.</li>
+        <li>How prefetching behavior is influenced by access patterns, algorithms, and compilation flags.</li>
+        <li>Whether forward sequential array traversal is more cache- and prefetch-friendly than backward traversal on modern CPUs.</li>
+        <li>What are brainfloats and can we use them?</li>
+    </ol>
+    
+    <p><strong>From A-C:</strong> I hope to understand: How SIMD instructions and multithreading interact with caches and prefetchers, and how to exploit them for efficient data processing.</p>
+
+    <p>By investigating these questions, I hope to build a clearer mental model of how compilers, caches, prefetchers, SIMD, and threading all work together — and where manual optimization can provide the most benefit.</p>
+
+    <h1>Compilation Research: </h1>
+        
+    <div class="note-box">
+        <strong>AVX-512 Library Reference:</strong> <a href="https://docs.oracle.com/cd/E37838_01/html/E61064/gsesq.html">https://docs.oracle.com/cd/E37838_01/html/E61064/gsesq.html</a>
+    </div>
+
+    <h2>Compilers</h2>
+    
+    <h3>Conditions for Variables and Register Trimming</h3>
+    <ul>
+        <li><strong>Compiler can remove variables:</strong> When code is used briefly, or not at all.</li>
+        <li><strong>Compiler will store as registers:</strong> Loop variables are often stored as temp registers (typically up to 16 general purpose?).</li>
+        <li><strong>Compiler cannot remove variables:</strong> When you grab its address, give keyword volatile, or print its value is passed as pointer and register pressure.</li>
+    </ul>
+
+    <h3>Loop Optimizations</h3>
+    <pre>for(int i=n; i > 0; i--);  // Better bc, zero register, easier to optimize, less comparison.
+for(int i=n; i != 0; i--); // Optimal micro-optimization.</pre>
+
+    <h2>Rule of Thumb</h2>
+    <p>Focus your optimizations on areas where the compiler cannot automatically optimize. You can also improve performance by aligning your data to encourage vectorization and by providing hints to the compiler, such as <code>#pragma unroll</code> for loop unrolling.</p>
+
+    <h2>Cases That Compiler Does Not Optimize</h2>
+    
+    <h3>When Compiler Cannot Prove Safety</h3>
+    <pre>// Compiler might not vectorize this (aliasing uncertainty)
+void add_arrays(double *a, double *b, double *c, int n) {
+    for (int i = 0; i < n; i++) {
+        a[i] = b[i] + c[i];
+    }
+}
+
+// Manual fix: use restrict
+void add_arrays(double *restrict a, double *restrict b, double *restrict c, int n) {
+    #pragma omp simd
+    for (int i = 0; i < n; i++) {
+        a[i] = b[i] + c[i];
+    }
+}</pre>
+
+    <h3>Complex Data Usage</h3>
+    <pre>// Compiler might not optimize this well
+for (int i = 0; i < n; i++) {
+    result += data[indices[i]] * weights[i];
+}
+
+// Manual: prefetch hints, blocking
+for (int i = 0; i < n; i += 4) {
+    __builtin_prefetch(&data[indices[i+8]]);
+    // ... process 4 elements
+}</pre>
+
+    <h3>When You Know Something the Compiler Doesn't</h3>
+    <pre>// You know n is always multiple of 8
+#pragma GCC unroll 8
+for (int i = 0; i < n; i++) {
+    // ...
+}</pre>
+
+    <h3>Manual Alignment for SIMD</h3>
+    <pre>double *array = aligned_alloc(64, n * sizeof(double));
+#pragma GCC ivdep
+for (int i = 0; i < n; i++) {
+    array[i] = ...;
+}</pre>
+
+    <h2>Optimization Flags</h2>
+    <ul>
+        <li><strong>-O1:</strong> Simple optimization: remove dead code, and improve loops.</li>
+        <li><strong>-O2:</strong> Loop unrolling, instruction scheduling, inlining functions.</li>
+        <li><strong>-O3:</strong> +SIMD, function cloning, aggressive loop transformations.</li>
+        <li><strong>-Ofast:</strong> Even more aggressive. Ignores strict standards compliance. Will have different floating point behavior (e.g., may assume no NaNs or infinities in floating-point math).</li>
+        <li><strong>--march=native:</strong> Enables all instruction sets supported by your current CPU (AVX2, AVX-512, SSE4, etc.).</li>
+        <li><strong>-mfma:</strong> Enable Fused Multiply-Add (FMA) instructions, which compute <code>a * b + c</code> in one step with higher precision and lower latency. Common in linear algebra, ML, and scientific code.</li>
+        <li><strong>-ffast-math:</strong> Aggressively optimize floating-point math by relaxing strict IEEE rules. ENABLES: <code>-fno-trapping-math</code>, <code>-fno-math-errno</code>, <code>-funsafe-math-optimizations</code></li>
+        <li><strong>-fstrict-aliasing:</strong> Assumes that pointers of different types do not alias the same memory.</li>
+        <li><strong>-fopenmp:</strong> Enables OpenMP pragmas (e.g., <code>#pragma omp parallel for</code>) for multithreading. Without this flag, OpenMP directives are ignored.</li>
+    </ul>
+
+    <h2>OpenMP Research and Comparisons</h2>
+    <p>
+        Pthreads allow explicit control of threads, including stack size and scheduling. They are best 
+        when threads must be reused or customized.
+    </p>
+    <p>
+        OpenMP provides a higher-level approach using compiler pragmas, ideal for simple parallelism where 
+        thread management is handled automatically.
+    </p>
+    <p>
+        Vectorized operations often follow the pattern load → compute → store across multiple elements. 
+        OpenMP maps these efficiently, while Pthreads enable more specialized or persistent threading models.
+    </p>
+
+
+
+    <h1>Cache & Prefetch Behavior</h1>
+
+    <h2>What Affects the Prefetcher?</h2>
+    
+    <p>Essentially, the prefetcher gets weak, or non-existent, if you make stuff that the CPU can't predict, thus you lose out on prefetching the next cache line. Here are some conditions:</p>
+    
+    <ol>
+        <li>A memory access becomes "irregular" when:</li>
+        <li>Stride ≠ 1 (or not aligned to cache lines)</li>
+        <li>Access depends on data (indirect/pointer-chasing)</li>
+        <li>Cross-iteration dependencies serialize accesses</li>
+        <li>Branching skips memory writes/reads unpredictably</li>
+        <li>Multiple threads scatter writes across memory</li>
+    </ol>
+
+    <h2>Things That Make Prefetcher Worse</h2>
+    
+    <h3>Strided or Non-Unit Access</h3>
+    <p>If your loop accesses memory with a stride that isn't 1 (or the size of the data type), addresses aren't sequential by 7 * sizeof(int) each iteration → prefetcher sees gaps. Small strides (like 2 or 4) can sometimes still be prefetched, but large or prime-number strides usually break it.</p>
+    <pre>for (int i = 0; i < N; i++)
+    sum += data[i*7];  // stride = 7 ints. Memory addresses jump</pre>
+
+    <h3>Indirect or Pointer-Chasing Accesses</h3>
+    <p>Access patterns where you go through another array or pointer. Now the next memory address depends on the content of <code>indices[i]</code>. Hardware can't predict which cache line will be needed next → prefetch fails.</p>
+    <pre>int idx = indices[i];
+sum += data[idx];</pre>
+
+    <h3>Cross-Iteration Dependencies</h3>
+    <p>When each iteration's memory location depends on previous iterations. Compiler may serialize the loop → memory accesses aren't contiguous anymore. Prefetchers rely on contiguous/sequential patterns, so efficiency drops.</p>
+    <pre>data[i+1] = data[i] + something;</pre>
+
+    <h3>Loops with Branches Affecting Memory</h3>
+    <p>Conditional access inside a loop can break predictability. If <code>condition[i]</code> is unpredictable, some iterations may skip a memory access → prefetcher sees "holes" in the stream.</p>
+    <pre>if (condition[i])
+    data[i] += 1;</pre>
+
+    <h3>Multithreading Interleaving</h3>
+    <p>If multiple threads write to different parts of memory in non-contiguous patterns, prefetching can be less effective because the hardware sees scattered access patterns.</p>
+
+    <h2>General Conclusion on Caches/Prefetchers</h2>
+    
+    <p><strong>Conclusion on Caches/Prefetchers:</strong> Caches are direction-agnostic, but prefetchers are typically better optimized for forward sequential access due to its prevalence in code. Backward access is still well-supported on modern CPUs, but prefetching may be slightly less efficient (e.g., higher latency to detect the pattern or fewer prefetched lines).</p>
+    <p>SIMD's rely heavily on prefetching! They do best under contignous memory accesses when vectorizing!</p>
+    <p><strong>Conclusion... apparently to AI:</strong> Evidence from Hardware Documentation: Intel's optimization manuals (e.g., Intel 64 and IA-32 Architectures Optimization Reference Manual) note that prefetchers like the L2 streaming prefetcher can handle both directions but are tuned for forward access. AMD's Zen documentation similarly indicates that prefetchers adapt to descending patterns, though forward access is the primary optimization target.</p>
+     
+
+    <h2>Experimentations</h2>
+    
+    <p>For very large arrays (e.g., ~471M doubles), forward access is consistently faster, especially with vectorization, since prefetching and SIMD optimizations are designed for it. This effect becomes most noticeable at larger sizes where prefetch algorithms are more effective.</p>
+
+    <p>For mid-sized arrays, in non-vectorized code, backward access can trend faster, though large strides degrade performance. Then for small, cache-resident arrays, access direction makes little difference.</p>
+
+    <p><strong>So IG:</strong> Use forward access for vectorized code. For non-vectorized code, backward access may help on mid-sized arrays. On small arrays, it's negligible.</p>
+
+    
+
+    <h1>Bfloat</h1>
+    
+    <p>The <strong>bfloat16 (brain floating point)</strong> [1][2] format is a computer number format occupying 16 bits in memory. It represents a wide dynamic range of numeric values by using a floating radix point. This format is a shortened (16-bit) version of the 32-bit IEEE 754 single-precision floating-point format (binary32), with the intent of accelerating machine learning and near-sensor computing.</p>
+
+    <h2>Accumulation</h2>
+    <p>When I say a vectorized operation <em>"accumulates in float"</em> in the context of bfloat16 (bf16) operations with hardware like <strong>AVX-512BF16</strong>, I mean: The operation (e.g., a dot product or matrix multiplication) performs computations using <strong>bfloat16 inputs</strong> directly. The result of the operation (or intermediate results, like sums in a dot product) is stored and managed in <strong>32-bit float (fp32)</strong> format to maintain numerical stability and precision.</p>
+
+    <h2>General Notes</h2>
+    <p>In all languages and abstraction levels, if you don't have special hardware, <strong>bfloat will be simulated</strong>, often accumulating into <code>f32</code>.</p>
+
+    <p><strong>C and C++:</strong> If hardware supports it, you can use some bfloat vectorized operations, but they will still accumulate.</p>
+
+    <p><strong>C:</strong> Does not have a native bfloat type. You would need custom assembly for general arithmetic. You must explicitly know when to use the right intrinsics for bfloats that accumulate, or when conversions are required.</p>
+
+    <p><strong>C++:</strong> Has a native bfloat type and abstracts away some of the details, giving you less control/knowledge of when/if conversion happens. However, it can perform general arithmetic and potentially enable auto-vectorization. But the <strong>low-level behavior</strong> still mirrors C's when using intrinsics.</p>
+
+    <p><strong>GPU and OpenBLAS:</strong> Also suffer from the same issues. They may implement optimized workarounds.</p>
+
+    <p><strong>PyTorch, NumPy:</strong> Also face similar problems. However, they most likely optimize for ML algorithms.</p>
+
+    <h2>My Thoughts</h2>
+    <ul>
+        <li>Most likely, conversions occur at the <strong>register level</strong>, so you're probably not adding new things to the stack. To optimize, you may need to <strong>pad vectors</strong> to avoid unnecessary conversions. You could analyze load/store patterns better. Ideally, you want all your bfloats to remain in vectors.</li>
+    </ul>
+
+    <p><strong>Practical takeaway:</strong></p>
+    <ul>
+        <li>To use bfloats effectively in C or C++: Ensure caching benefits outweigh the extra instructions. Make sure the time spent converting is still less than fetching from higher levels of cached memory.</li>
+    </ul>
+
+    <p><strong>C++ Thoughts:</strong> General arithmetic support helps handle leftover operations that don't fit vectorized shapes. Yet... Idk. As a higher-level language, it may be less optimal than carefully tuned C.</p>
+
+    <script>
+        document.querySelector('button').addEventListener('click', function() {
+            window.print();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+What affects the pre-fetcher? 
+  Essestinally, the pre-fetcher gets weak, or non-existent, if you make stuff, that the cpu cant predict, thus you lose out on pre-fetching the next cache line. Here are some conditions. Examples are in 
+    1. A memory access becomes “irregular” when:
+    2. Stride ≠ 1 (or not aligned to cache lines)
+    3. Access depends on data (indirect/pointer-chasing)
+    4. Cross-iteration dependencies serialize accesses
+    5. Branching skips memory writes/reads unpredictably
+    6. Multiple threads scatter writes across memory
+
+Things that make pre-fetcher worse! 
+  Strided or non-unit access:
+    If your loop accesses memory with a stride that isn’t 1 (or the size of the data type), addresses aren’t sequential.by 7 * sizeof(int) each iteration → prefetcher sees gaps. Small strides (like 2 or 4) can sometimes still be prefetched, but large or prime-number strides usually break it.
+    
+    Example:for (int i = 0; i < N; i++)sum += data[i*7];  // stride = 7 ints Memory addresses jump 
+
+  Indirect or pointer-chasing accesses: Access patterns where you go through another array or pointer:Now the next memory address depends on the content of indices[i]. Hardware can’t predict which cache line will be needed next → prefetch fails.
+
+      int idx = indices[i];
+      sum += data[idx];
+
+  Cross-iteration dependencies: 
+    When each iteration’s memory location depends on previous iterations:Compiler may serialize the loop → memory accesses aren’t contiguous anymore. Prefetchers rely on contiguous/sequential patterns, so efficiency drops.
+    data[i+1] = data[i] + something;
+
+  Loops with branches affecting memory: 
+    Conditional access inside a loop can break predictability:If condition[i] is unpredictable, some iterations may skip a memory access → prefetcher sees “holes” in the stream.
+
+    if (condition[i])
+        data[i] += 1;
+
+  Multithreading interleaving: 
+    If multiple threads write to different parts of memory in non-contiguous patterns, prefetching can be less effective because the hardware sees scattered access patterns.

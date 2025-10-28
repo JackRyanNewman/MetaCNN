@@ -1,0 +1,9 @@
+Quick headline (rule-of-thumb from these estimates)
+
+For input N = 128, the estimated crossover where FFT becomes cheaper is K ≈ 16.
+
+For N = 256, crossover at K ≈ 17.
+
+For N = 512, crossover at K ≈ 18.
+
+So — for typical image/CNN sizes, FFT starts to look favorable once kernel sizes enter the mid-teens (~16–20). That matches the usual practical guidance (Winograd/direct for very small kernels, FFT for large kernels).

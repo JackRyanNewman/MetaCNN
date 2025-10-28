@@ -1,0 +1,79 @@
+C-Optimzations Notes: 
+Optimization Flags:
+    -01: Simple optpimization: remeove dead code, and improve loops. 
+    -02: Loopingunrolling, instruciton scheduling, inlinng functions, 
+    -03: +SIMD, function cloning, agrressive loop trannsofrimations. 
+    -0fast: Even more aggressive. Ignores strict standards compliance, Will have different floating point behavior -(e.g., may assume no NaNs or infinities in floating-point math). 
+    --march=native → Enables all instruction sets supported by your current CPU (AVX2, AVX-512, SSE4, etc.).
+    -mfma Enable Fused Multiply-Add (FMA) instructions, which compute a * b + c in one step with higher precision and lower latency. Common in linear algebra, ML, and scientific code.
+    -ffast-math: Aggressively optimize floating-point math by relaxing strict IEEE rules. ENABLES!
+        -fno-trapping-math, -fno-math-errno, -funsafe-math-optimizations
+    -fstrict-aliasing: Assumes that pointers of different types do not alias the same memory.
+    -fopenmp Enables OpenMP pragmas (e.g., #pragma omp parallel for) for multithreading. Without this flag, OpenMP directives are ignored.
+
+**OpenMP research and comparsions**
+    Pthreads is useful, and you can explicity set the stack size, but on a global scale, poetinally within a scope of a method.
+    Prgrma is super useful, if you want to have one off threading, and dont need to reuse them again. Its basic is an autocompiler.
+    P-threads is really only useful if you want to reuse you threads, and you wnat to make custom scheduling.Generally A vectorized operation, is load+add+store, for X elements.
+
+AVX-512 Library Reference: [https://docs.oracle.com/cd/E37838_01/html/E61064/gsesq.html](https://docs.oracle.com/cd/E37838_01/html/E61064/gsesq.html)
+
+Compilers 
+Conditions for varibles and regestier trimming. 
+      Compiler can removes varibles: When code is used brielfy, or not at al  
+      Compiler will store as regiesters: Loop varibles are often stored as temp Regiesters(typically up 16 general purpose?)  
+      Comipiler cannot remove varibles: When you grab its address, give keyword volite, or print i value is passed as pointer and regiester pressure.     
+ Loop Optimizations! ;[ big sad.       
+    for(int i=n; i > 0; i++) ; Better bc, zero regestier, easier to optimzie, less comparison.  
+    for(int i=n; i != 0; i++); Optiminal mirco-Optimization.
+
+
+Rule of Thumb:
+Focus your optimizations on areas where the compiler cannot automatically optimize. You can also improve performance by aligning your data to encourage vectorization and by providing hints to the compiler, such as #pragma unroll for loop unrolling. 
+
+CASES THAT COMPILER DOES NOT OPTIMIZE
+    When compiler cvanot prove safety
+    // Compiler might not vectorize this (aliasing uncertainty)
+        void add_arrays(double *a, double *b, double *c, int n) {
+            for (int i = 0; i < n; i++) {
+                a[i] = b[i] + c[i];
+            }
+        }
+
+        // Manual fix: use restrict
+        void add_arrays(double *restrict a, double *restrict b, double *restrict c, int n) {
+            #pragma omp simd
+            for (int i = 0; i < n; i++) {
+                a[i] = b[i] + c[i];
+            }
+        }
+
+    Complex Data Usage
+
+        // Compiler might not optimize this well
+        for (int i = 0; i < n; i++) {
+            result += data[indices[i]] * weights[i];
+        }
+
+        // Manual: prefetch hints, blocking
+        for (int i = 0; i < n; i += 4) {
+            __builtin_prefetch(&data[indices[i+8]]);
+            // ... process 4 elements
+        }
+
+    When You Know Something the Compiler Doesn't
+
+        // You know n is always multiple of 8
+        #pragma GCC unroll 8
+        for (int i = 0; i < n; i++) {
+            // ...
+        }
+
+    Manual Allginement for SIMD. 
+
+        double *array = aligned_alloc(64, n * sizeof(double));
+        #pragma GCC ivdep
+        for (int i = 0; i < n; i++) {
+            array[i] = ...;
+        }
+

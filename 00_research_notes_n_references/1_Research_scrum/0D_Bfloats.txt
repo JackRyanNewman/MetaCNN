@@ -1,0 +1,19 @@
+Bfloat
+The bfloat16 (brain floating point) format is a computer number format occupying 16 bits in memory. It represents a wide dynamic range of numeric values by using a floating radix point. This format is a shortened (16-bit) version of the 32-bit IEEE 754 single-precision floating-point format (binary32), with the intent of accelerating machine learning and near-sensor computing.
+
+Accumulation
+When I say a vectorized operation "accumulates in float" in the context of bfloat16 operations with hardware like AVX-512BF16, I mean: The operation performs computations using bfloat16 inputs directly. The result of the operation is stored and managed in 32-bit float format to maintain numerical stability and precision.
+
+General Notes
+  In all languages and abstraction levels, if you don’t have special hardware, bfloat will be simulated, often accumulating into f32.
+  C and C++: If hardware supports it, you can use some bfloat vectorized operations, but they will still accumulate.
+  C: Does not have a native bfloat type. You would need custom assembly for general arithmetic. You must explicitly know when to use the right intrinsics for bfloats that accumulate, or when conversions are required.
+  C++: Has a native bfloat type and abstracts away some of the details, giving you less control of when conversion happens. However, it can perform general arithmetic and potentially enable auto-vectorization. But the low-level behavior still mirrors C’s when using intrinsics.
+  GPU and OpenBLAS: Also suffer from the same issues. They may implement optimized workarounds.
+  PyTorch, NumPy: Also face similar problems. However, they most likely optimize for ML algorithms.
+
+My Thoughts
+Most likely, conversions occur at the register level, so you’re probably not adding new things to the stack. To optimize, you may need to pad vectors to avoid unnecessary conversions. You could analyze load/store patterns better. Ideally, you want all your bfloats to remain in vectors.
+
+Practical takeaway:
+To use bfloats effectively in C or C++: Ensure caching benefits outweigh the extra instructions. Make sure the time spent converting is still less than fetching from higher levels of cached memory. C++ Thoughts: General arithmetic support helps handle leftover operations that don’t fit vectorized shapes. Yet, as a higher-level language, it may be less optimal than carefully tuned C.

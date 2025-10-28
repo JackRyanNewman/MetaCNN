@@ -1,0 +1,21 @@
+# Compiler
+CC = gcc
+
+# Compiler flags
+CFLAGS = -O3 -mavx2
+
+# Source and executable
+SRC = random.c
+EXE = random.exe
+
+# Default target: delete old exe, build, then run
+all: 
+	@if exist $(EXE) del $(EXE)
+	$(CC) $(CFLAGS) -o $(EXE) $(SRC)
+	@echo Build complete. Running $(EXE)...
+	@$(EXE)
+
+# Clean target
+clean:
+	@if exist $(EXE) del $(EXE)
+	@echo Clean complete.

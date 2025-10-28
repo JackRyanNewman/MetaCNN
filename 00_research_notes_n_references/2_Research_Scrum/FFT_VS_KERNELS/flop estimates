@@ -1,0 +1,94 @@
+# Calculating FLOP estimates for direct vs FFT-based 2D convolution
+# We'll compare for input sizes N = [128, 256, 512] and kernel sizes K from 3 to 128.
+# Assumptions & estimates:
+# - Direct conv FLOPs ≈ 2 * N^2 * K^2  (one multiply + one add per kernel element per output)
+# - FFT conv:
+#   * Pad to P = next power of two >= N + K - 1
+#   * Use a rough cost estimate for a complex 1D FFT: 5 * M * log2(M) FLOPs
+#   * 2D FFT cost approximated by doing FFT along rows and columns: cost ≈ 2 * 5 * P^2 * log2(P) = 10 * P^2 * log2(P)
+#   * We need 2 forward FFTs (input and kernel) + 1 inverse => multiply by 3
+#   * Add pointwise complex multiplication cost ≈ 6 * P^2 (a complex multiply ~6 real ops)
+#   * So FFT conv FLOPs ≈ 3 * (5 * 2 * P^2 * log2(P)) + 6 * P^2 = 15 * P^2 * log2(P) + 6 * P^2
+#
+# These are approximations intended to illustrate crossover behavior (not exact library timings).
+# We'll compute FLOPs, ratio (direct / fft) and show where ratio > 1 (FFT is cheaper).
+
+import math
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+def next_pow2(x):
+    return 1 << (x - 1).bit_length()
+
+def flop_direct(N, K):
+    return 2.0 * (N**2) * (K**2)
+
+def flop_fft(N, K):
+    P = next_pow2(N + K - 1)
+    # cost estimate
+    return 15.0 * (P**2) * math.log2(P) + 6.0 * (P**2)
+
+Ns = [128, 256, 512]
+Ks = list(range(3, 129, 1))
+
+results = []
+for N in Ns:
+    for K in Ks:
+        fd = flop_direct(N, K)
+        ff = flop_fft(N, K)
+        ratio = fd / ff
+        results.append({"N": N, "K": K, "P": next_pow2(N+K-1), "Direct_FLOPs": fd, "FFT_FLOPs": ff, "Direct_over_FFT": ratio})
+
+df = pd.DataFrame(results)
+
+# For each N, find the smallest K where FFT becomes cheaper (ratio > 1)
+crossovers = {}
+for N in Ns:
+    sub = df[df['N']==N]
+    cross = sub[sub['Direct_over_FFT'] > 1]
+    if not cross.empty:
+        crossover_K = int(cross.iloc[0]['K'])
+        crossovers[N] = crossover_K
+    else:
+        crossovers[N] = None
+
+# Display a concise table for selected K values and each N
+selected_Ks = [3,5,7,11,16,32,48,64,96,128]
+table_rows = []
+for N in Ns:
+    for K in selected_Ks:
+        row = df[(df['N']==N)&(df['K']==K)].iloc[0]
+        table_rows.append({
+            "N": N, "K": K, "P": row['P'],
+            "Direct_FLOPs (×1e6)": row['Direct_FLOPs']/1e6,
+            "FFT_FLOPs (×1e6)": row['FFT_FLOPs']/1e6,
+            "Direct/FFT": row['Direct_over_FFT']
+        })
+
+table_df = pd.DataFrame(table_rows)
+
+# Create plot showing Direct/FFT ratio vs K for each N
+plt.figure(figsize=(8,5))
+for N in Ns:
+    sub = df[df['N']==N]
+    plt.plot(sub['K'], sub['Direct_over_FFT'], label=f"N={N}")
+plt.axhline(1.0, linestyle='--', linewidth=1)
+plt.xlabel('Kernel size K (K x K)')
+plt.ylabel('Direct FLOPs / FFT FLOPs (ratio)')
+plt.title('Estimated Direct vs FFT FLOP Ratio vs Kernel Size')
+plt.legend()
+plt.yscale('log')  # use log scale for clarity
+plt.grid(True, which='both', linestyle=':', linewidth=0.5)
+plt.tight_layout()
+plt.show()
+
+# Present the table to the user
+import caas_jupyter_tools as tools; tools.display_dataframe_to_user("Direct_vs_FFT_summary", table_df)
+
+# Print crossover info and top of full DataFrame for reference
+print("Estimated crossover (smallest K where Direct_FLOPs > FFT_FLOPs):")
+for N, k in crossovers.items():
+    print(f"  N={N}: crossover at K = {k if k is not None else '>128 (not within range)'}")
+
+df.head(20)

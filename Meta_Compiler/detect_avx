@@ -1,0 +1,13 @@
+import cpuinfo
+
+info = cpuinfo.get_cpu_info()
+print(info['flags'])  # list of supported features
+
+if 'avx512f' in info['flags']:
+    print("CPU supports AVX-512")
+elif 'avx2' in info['flags']:
+    print("CPU supports AVX2")
+elif 'avx' in info['flags']:
+    print("CPU supports AVX")
+else:
+    print("No AVX support")

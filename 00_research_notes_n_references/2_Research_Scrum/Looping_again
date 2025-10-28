@@ -1,0 +1,51 @@
+Re-Study
+    Static: Every c file gets a copy of this value: commpilation error if multplie of same statics. 
+    const 
+        const int * const p:: neither pointer nor value will change. 
+        if you assign const: It will put data into roidata, which is ready only data which is effeicent. 
+    Compile time and run time allocations: 
+        When you assign a non-pre allocatedd pointer globals during compiles time, they get all neatly bundled togther and avoid 
+        If you assign globals at run timme, structs, arrays, types, they will also avoid indirection! HOWEVER, a 
+        int *gptr;void init(void) {gptr = malloc(1024 * sizeof(int));} Will cause it indriection, accesses gptr[i] involve one level of indirection. Read gptr to get the heap base address. Compute offset and access the element.
+        Now you could pass around a statically allocated array at from your main, which would be safe. But! All values would be allocated on the stack, and you run into nasty problems. Because as soon that stacak dies, so to does it. SO doont do it! 
+
+    int arrCompile[10];    // global static array: The varible is the adress that holds the first value of the arrray, you just move along this address offset to acess others. 
+    int *arrPointer;       // global pointer:      The varible is the adress that holds the address the malloc array, you must first get the maalloc array, then use its offset
+
+
+From this knowledge 
+
+void f(float *a, float *b) {
+    for (int i = 0; i < 1000; ++i)
+        a[i] += b[i];
+}
+That means
+    If the compiler can’t prove that a and b point to different arrays, it must assume they could overlap:
+    It cannot prefetch or vectorize safely
+    It must reload every a[i] and b[i] from memory each iteration.
+    Even -O3 or -Ofast won’t fix that, because aliasing would make those transforms incorrect.
+
+For the c compiler: a compiler has to assume that any pointer could potentially alias any memory, unless it can prove otherwise.
+
+
+https://chatgpt.com/c/68e56534-7de4-832a-b064-6958fe73bcd1
+
+
+
+
+LOOPS: The compiler, will change the structure of the for loop to a while loop, by removing the first branch! IF it can gaurteed, the first condition, will be true 
+
+NOTE
+for (int i = 100; i > 0; i -= 10) { ... } THIS RIGHT HERE! It can remmove it out! 
+Prefix (--i): decrements and yields the new value
+Postfix (i--): creates a temporary to hold the old value, then decrements
+
+Therefore, an optiminal loop
+
+| Segment   | What’s stored there                       |
+| --------- | ----------------------------------------- |
+| **Text**  | Your compiled code / instructions         | No difference in caching, only excplict values are storedd and it affects binary size. 
+| **Data**  | Initialized global/static variables       | 
+| **BSS**   | **Uninitialized global/static variables** |
+| **Heap**  | Dynamic memory (`malloc`)                 |
+| **Stack** | Local variables inside functions          |

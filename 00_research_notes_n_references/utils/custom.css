@@ -1,0 +1,45 @@
+/* Markdown Preview Styling Function */
+/* .markdown-preview-styling {
+  line-height: 1.25 !important; 
+  font-size: 12px !important;
+  margin-bottom: 12px !important; 
+}
+
+
+/* Paragraphs */
+.markdown-body p {
+  margin-bottom: 12px !important;
+  line-height: 1.05 !important;
+  /* font-size: 12px !important; */
+}
+
+/* Headers */
+  .markdown-body h1,
+  .markdown-body h2,
+  .markdown-body h3,
+  .markdown-body h4,
+  .markdown-body h5,
+  .markdown-body h6 {
+    /* color: hsl(0, 0%, 13%) !important;  */
+    margin-bottom: 2px !important;
+  }
+
+li, ul, p.code-line{
+   margin-bottom: 2px !important;
+}
+
+/* Footer (if applicable, targeting common footer elements) */
+  /* .markdown-body footer {
+    color: hsl(0, 0%, 13%) !important; 
+  } */
+
+/* Ensure foreground consistency for other elements */
+  /* .markdown-body pre,
+  .markdown-body code,
+  .markdown-body blockquote,
+  .markdown-body ul,
+  .markdown-body ol,
+  .markdown-body li,
+  .markdown-body table {
+    color: hsl(0, 0%, 82%) !important; 
+  }  */

@@ -1,0 +1,117 @@
+
+
+
+
+# Compiler # Base compiler flags
+CC = gcc
+CFLAGS = -O3 -mavx2
+SRC = loop_per.c
+EXE = loop_per.exe
+SIMDX = 1
+SIMDY = 0
+FBX = 1
+FBY = 0
+
+
+# Macro definitions (will override for specific runs)
+# We use -DTESTF=1 -DSIMDON=0 for first run, etc.
+
+
+# Targets
+all: run_both
+
+# Run both versions sequentially
+run_both: run_testf1 run_testf0
+
+# Default target: run both TESTF variants
+all: run_testf1 run_testf1 run_testf0
+
+# Run TESTF=1
+run_testf1:
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=1 -DSIMDON=$(SIMDX) -DPRINTHEADER=1 -DFOOBAR=$(FBX) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=1 -DSIMDON=$(SIMDX) -DFOOBAR=$(FBX) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=1 -DSIMDON=$(SIMDX) -DFOOBAR=$(FBX) $(SRC) -o $(EXE)
+	@$(EXE)
+
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=1 -DSIMDON=$(SIMDX) -DPRINTHEADER=1 -DFOOBAR=$(FBY) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=1 -DSIMDON=$(SIMDX) -DFOOBAR=$(FBY) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=1 -DSIMDON=$(SIMDX) -DFOOBAR=$(FBY) $(SRC) -o $(EXE)
+	@$(EXE)
+
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=1 -DSIMDON=$(SIMDY) -DPRINTHEADER=1 -DFOOBAR=$(FBX) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=1 -DSIMDON=$(SIMDY) -DFOOBAR=$(FBX) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=1 -DSIMDON=$(SIMDY) -DFOOBAR=$(FBX) $(SRC) -o $(EXE)
+	@$(EXE)
+
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=1 -DSIMDON=$(SIMDY) -DPRINTHEADER=1 -DFOOBAR=$(FBY) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=1 -DSIMDON=$(SIMDY) -DFOOBAR=$(FBY) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=1 -DSIMDON=$(SIMDY) -DFOOBAR=$(FBY) $(SRC) -o $(EXE)
+	@$(EXE)
+
+run_testf0:
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=0 -DSIMDON=$(SIMDX) -DPRINTHEADER=1 -DFOOBAR=$(FBX) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=0 -DSIMDON=$(SIMDX) -DFOOBAR=$(FBX) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=0 -DSIMDON=$(SIMDX) -DFOOBAR=$(FBX) $(SRC) -o $(EXE)
+	@$(EXE)
+
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=0 -DSIMDON=$(SIMDX) -DPRINTHEADER=1 -DFOOBAR=$(FBY) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=0 -DSIMDON=$(SIMDX) -DFOOBAR=$(FBY) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=0 -DSIMDON=$(SIMDX) -DFOOBAR=$(FBY) $(SRC) -o $(EXE)
+	@$(EXE)
+
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=0 -DSIMDON=$(SIMDY) -DPRINTHEADER=1 -DFOOBAR=$(FBX) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=0 -DSIMDON=$(SIMDY) -DFOOBAR=$(FBX) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=0 -DSIMDON=$(SIMDY) -DFOOBAR=$(FBX) $(SRC) -o $(EXE)
+	@$(EXE)
+
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=0 -DSIMDON=$(SIMDY) -DPRINTHEADER=1 -DFOOBAR=$(FBY) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=0 -DSIMDON=$(SIMDY) -DFOOBAR=$(FBY) $(SRC) -o $(EXE)
+	@$(EXE)
+	@if exist $(EXE) del $(EXE)
+	@$(CC) $(CFLAGS) -DTESTF=0 -DSIMDON=$(SIMDY) -DFOOBAR=$(FBY) $(SRC) -o $(EXE)
+	@$(EXE)
+
+
+# Optional clean target
+clean:
+	Remove-Item $(EXE) -ErrorAction Ignore
+
+

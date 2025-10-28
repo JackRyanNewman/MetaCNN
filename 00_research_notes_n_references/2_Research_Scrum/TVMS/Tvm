@@ -1,0 +1,71 @@
+2. Graph-Level Optimizations (beyond compiler tricks)
+
+This is what you’re sensing as the “mystery sauce” frameworks add. It’s not just math → it’s dataflow orchestration across the whole network.
+
+Examples:
+
+🔸 a) Operator Fusion
+
+Combine multiple elementwise ops with the convolution.
+
+Ex: Conv → BatchNorm → ReLU becomes one kernel.
+
+Saves memory bandwidth (only one store/load).
+
+🔸 b) Constant Folding
+
+Pre-compute anything static.
+
+Ex: BatchNorm parameters (scale + shift) can be folded into convolution weights at compile time.
+
+Removes the BN op entirely during inference.
+
+🔸 c) Memory Reuse / Lifetime Analysis
+
+Instead of allocating new memory for every intermediate tensor, the compiler analyzes when tensors die and reuses the same buffer.
+
+This can shrink memory use by 10× in deep nets.
+
+General C compilers don’t know tensor lifetimes across function boundaries → ML compilers do.
+
+🔸 d) Layout Transformations
+
+Decide if tensors should be stored as NCHW (channels-first) or NHWC (channels-last).
+
+On CPUs: vectorization prefers NHWC.
+
+On GPUs: coalesced memory prefers NCHW.
+
+ML compilers insert layout transforms automatically where needed.
+
+🔸 e) Op Reordering
+
+Safe reorderings like: (A + B) + C → A + (B + C) to fit better into SIMD tiles.
+
+Or reordering convolution + pooling layers for cache alignment.
+
+🔸 f) Quantization + Mixed Precision
+
+Automatically replace float32 with float16/int8 if accuracy stays within tolerance.
+
+This reduces memory + doubles throughput.
+
+Compilers can insert cast ops where needed and fuse them away.
+
+🔸 g) Autotuning / Kernel Search
+
+Run microbenchmarks on your actual hardware.
+
+Try different tile sizes, loop orderings, vector widths.
+
+Pick the fastest one.
+
+TVM, cuDNN, TensorRT all do this → something no static C compiler will ever attempt.
+
+🔸 h) Cross-Layer Scheduling
+
+Overlap compute with data transfer.
+
+E.g., while one layer computes on GPU, preload the next layer’s weights.
+
+This turns the whole net into a pipelined schedule.

@@ -1,0 +1,22 @@
+Loop Caching & SIMD Optimization: Research Motivation
+  Modern CNN architectures frequently store and process data in flattened 1D arrays, which places heavy demands on memory bandwidth and cache efficiency. While I’ve already explored optimizations in threading and parallel processing, I now want to focus more deeply on SIMD access patterns and their interaction with caching and prefetching.
+
+  At a low level, performance depends not only on computation but also on how data flows through the memory hierarchy. Sequential versus non-sequential access, cache line alignment, and compiler vectorization strategies all play a role in how effectively hardware prefetchers detect and optimize memory usage. I also want to explore expirmental information(Such as data types), and how I could/if I can leverage them for CNNs. 
+
+  This research aims to clarify:
+    A. What optimizations the compiler performs automatically versus what requires manual intervention, also look more deeply into OpenMP and threading.
+    B. How prefetching behavior is influenced by access patterns, algorithms, and compilation flags.
+    C. Whether forward sequential array traversal is more cache- and prefetch-friendly than backward traversal on modern CPUs.
+    D. What are brainfloats and can we use them? 
+    From A-C: I hope to understand: How SIMD instructions and multithreading interact with caches and prefetchers, and how to exploit them for efficient data processing.
+
+  By investigating these questions, I hope to build a clearer mental model of how compilers, caches, prefetchers, SIMD, and threading all work together — and where manual optimization can provide the most benefit.
+
+
+ 
+
+  
+
+
+
+       

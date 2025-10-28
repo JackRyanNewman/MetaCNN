@@ -1,0 +1,18 @@
+Scrum-to do list. 
+
+1. Make it so, that we can swap mini_batches instead, and alternate between that, and custom threaded method to swap within class boundaries.
+2. Evualute memory before hand, so we can create x+files of .bin's, so we alterante between them,  IF files are way to large, we can look intto windowsSotage Direct. 
+3. Explore GPU options. 
+4. Intergate tool into pytorch pipieline? 
+6. Implementedd workshoped
+  6.1 CNN Archecture. 
+  6.2 
+    Create python function, to create our defines for unique foward+back_ward + specific activation functions. 
+    Then write those functions as a static arrayy, then loop unroll them in our train process. 
+    With this, our marco will generate unique pairs, and will competely dirvurtilize our data!  
+  6.3: Multi-styled batches: comments. 
+  6.4: Deployed optimization Kernel mutplication stradagies. Do FFT anyslsis for tvm
+  6.5 Emmploy data set size anyslis for optminal sizing. 
+7. Mabye make varibles static for future interactions, declare externs for clarities?? 
+
+Alwayys check up on compiler optimizations.

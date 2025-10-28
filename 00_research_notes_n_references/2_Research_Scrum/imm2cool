@@ -1,0 +1,14 @@
+H_out = floor((H + 2P - KH) / S) + 1
+W_out = floor((W + 2P - KW) / S) + 1
+
+im2col_rows = KH * KW * C_in
+im2col_cols = H_out * W_out
+
+im2col_matrix_size = (KH * KW * C_in) × (H_out * W_out)
+
+14*628
+13*13 with stride 1. 
+
+
+H_out = floor((H - KH) / S) + 1 //14-13/1+1 = 2
+W_out = floor((W - KW) / S) + 1 //
